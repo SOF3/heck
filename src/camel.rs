@@ -1,3 +1,5 @@
+use std::fmt;
+
 /// This trait defines a camel case conversion.
 ///
 /// In CamelCase, word boundaries are indicated by capital letters, including
@@ -22,7 +24,28 @@ pub trait CamelCase: ToOwned {
 
 impl CamelCase for str {
     fn to_camel_case(&self) -> String {
-        ::transform(self, ::capitalize, |_| {})
+        AsCamelCase(self).to_string()
+    }
+}
+
+/// This wrapper performs a camel case conversion in [`fmt::Display`].
+///
+/// ## Example:
+///
+/// ```
+/// extern crate heck;
+/// fn main() {
+///     use heck::AsCamelCase;
+///
+///     let sentence = "We are not in the least afraid of ruins.";
+///     assert_eq!(format!("{}", AsCamelCase(sentence)), "WeAreNotInTheLeastAfraidOfRuins");
+/// }
+/// ```
+pub struct AsCamelCase<T: AsRef<str>>(pub T);
+
+impl<T: AsRef<str>> fmt::Display for AsCamelCase<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        ::transform(self.0.as_ref(), ::capitalize, |_| Ok(()), f)
     }
 }
 

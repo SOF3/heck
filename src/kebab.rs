@@ -1,3 +1,5 @@
+use std::fmt;
+
 /// This trait defines a kebab case conversion.
 ///
 /// In kebab-case, word boundaries are indicated by hyphens.
@@ -21,7 +23,28 @@ pub trait KebabCase: ToOwned {
 
 impl KebabCase for str {
     fn to_kebab_case(&self) -> Self::Owned {
-        ::transform(self, ::lowercase, |s| s.push('-'))
+        AsKebabCase(self).to_string()
+    }
+}
+
+/// This wrapper performs a kebab case conversion in [`fmt::Display`].
+///
+/// ## Example:
+///
+/// ```
+/// extern crate heck;
+/// fn main() {
+///     use heck::AsKebabCase;
+///     
+///     let sentence = "We are going to inherit the earth.";
+///     assert_eq!(format!("{}", AsKebabCase(sentence)), "we-are-going-to-inherit-the-earth");
+/// }
+/// ```
+pub struct AsKebabCase<T: AsRef<str>>(pub T);
+
+impl<T: AsRef<str>> fmt::Display for AsKebabCase<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        ::transform(self.0.as_ref(), ::lowercase, |f| write!(f, "-"), f)
     }
 }
 

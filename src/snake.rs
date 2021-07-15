@@ -1,3 +1,5 @@
+use std::fmt;
+
 /// This trait defines a camel case conversion.
 ///
 /// In snake_case, word boundaries are indicated by underscores.
@@ -34,9 +36,33 @@ impl<T: ?Sized + SnakeCase> SnekCase for T {
 
 impl SnakeCase for str {
     fn to_snake_case(&self) -> String {
-        ::transform(self, ::lowercase, |s| s.push('_'))
+        AsSnakeCase(self).to_string()
     }
 }
+
+/// This wrapper performs a snake case conversion in [`fmt::Display`].
+///
+/// ## Example:
+///
+/// ```
+/// extern crate heck;
+/// fn main() {
+///     use heck::AsSnakeCase;
+///     
+///     let sentence = "We carry a new world here, in our hearts.";
+///     assert_eq!(format!("{}", AsSnakeCase(sentence)), "we_carry_a_new_world_here_in_our_hearts");
+/// }
+/// ```
+pub struct AsSnakeCase<T: AsRef<str>>(pub T);
+
+impl<T: AsRef<str>> fmt::Display for AsSnakeCase<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        ::transform(self.0.as_ref(), ::lowercase, |f| write!(f, "_"), f)
+    }
+}
+
+/// Oh heck, AsSnekCase is an alias for AsSnakeCase. See AsSnakeCase for more documentation.
+pub use AsSnakeCase as AsSnekCase;
 
 #[cfg(test)]
 mod tests {

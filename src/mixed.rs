@@ -1,3 +1,5 @@
+use std::fmt;
+
 /// This trait defines a mixed case conversion.
 ///
 /// In mixedCase, word boundaries are indicated by capital letters, excepting
@@ -22,10 +24,34 @@ pub trait MixedCase: ToOwned {
 
 impl MixedCase for str {
     fn to_mixed_case(&self) -> String {
-        ::transform(self, |s, out| {
-            if out.is_empty() { ::lowercase(s, out); }
-            else { ::capitalize(s, out) }
-        }, |_| {})
+        AsMixedCase(self).to_string()
+    }
+}
+
+/// This wrapper performs a mixed case conversion in [`fmt::Display`].
+///
+/// ## Example:
+///
+/// ```
+/// extern crate heck;
+/// fn main() {
+///     use heck::AsMixedCase;
+///     
+///     let sentence = "It is we who built these palaces and cities.";
+///     assert_eq!(format!("{}", AsMixedCase(sentence)), "itIsWeWhoBuiltThesePalacesAndCities");
+/// }
+/// ```
+pub struct AsMixedCase<T: AsRef<str>>(pub T);
+
+impl<T: AsRef<str>> fmt::Display for AsMixedCase<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut first = true;
+        ::transform(self.0.as_ref(), |s, out| {
+            if first {
+                first = false;
+                ::lowercase(s, out)
+            } else { ::capitalize(s, out) }
+        }, |_| Ok(()), f)
     }
 }
 

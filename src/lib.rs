@@ -44,19 +44,21 @@ mod shouty_snake;
 mod snake;
 mod title;
 
-pub use camel::CamelCase;
-pub use kebab::KebabCase;
-pub use mixed::MixedCase;
-pub use shouty_snake::{ShoutySnakeCase, ShoutySnekCase};
-pub use snake::{SnakeCase, SnekCase};
-pub use title::TitleCase;
+pub use camel::{AsCamelCase, CamelCase};
+pub use kebab::{AsKebabCase, KebabCase};
+pub use mixed::{AsMixedCase, MixedCase};
+pub use shouty_snake::{AsShoutySnakeCase, AsShoutySnekCase, ShoutySnakeCase, ShoutySnekCase};
+pub use snake::{AsSnakeCase, AsSnekCase, SnakeCase, SnekCase};
+pub use title::{AsTitleCase, TitleCase};
+
+use std::fmt;
 
 use unicode_segmentation::UnicodeSegmentation;
 
-fn transform<F, G>(s: &str, with_word: F, boundary: G) -> String
+fn transform<F, G>(s: &str, mut with_word: F, mut boundary: G, f: &mut fmt::Formatter) -> fmt::Result
 where
-    F: Fn(&str, &mut String),
-    G: Fn(&mut String)
+    F: FnMut(&str, &mut fmt::Formatter) -> fmt::Result,
+    G: FnMut(&mut fmt::Formatter) -> fmt::Result
 {
 
     /// Tracks the current 'mode' of the transformation algorithm as it scans the input string.
@@ -75,7 +77,6 @@ where
         Uppercase,
     }
 
-    let mut out = String::new();
     let mut first_word = true;
 
     for word in s.unicode_words() {
@@ -105,8 +106,8 @@ where
                 // Word boundary after if next is underscore or current is
                 // not uppercase and next is uppercase
                 if next == '_' || (next_mode == WordMode::Lowercase && next.is_uppercase()) {
-                    if !first_word { boundary(&mut out); }
-                    with_word(&word[init..next_i], &mut out);
+                    if !first_word { boundary(&mut *f)?; }
+                    with_word(&word[init..next_i], &mut *f)?;
                     first_word = false;
                     init = next_i;
                     mode = WordMode::Boundary;
@@ -114,9 +115,9 @@ where
                 // Otherwise if current and previous are uppercase and next
                 // is lowercase, word boundary before
                 } else if mode == WordMode::Uppercase && c.is_uppercase() && next.is_lowercase() {
-                    if !first_word { boundary(&mut out); }
+                    if !first_word { boundary(&mut *f)?; }
                     else { first_word = false; }
-                    with_word(&word[init..i], &mut out);
+                    with_word(&word[init..i], &mut *f)?;
                     init = i;
                     mode = WordMode::Boundary;
 
@@ -126,40 +127,46 @@ where
                 }
             } else {
                 // Collect trailing characters as a word
-                if !first_word { boundary(&mut out); }
+                if !first_word { boundary(&mut *f)?; }
                 else { first_word = false; }
-                with_word(&word[init..], &mut out);
+                with_word(&word[init..], &mut *f)?;
                 break;
             }
         }
     }
 
-    out
+    Ok(())
 }
 
-fn lowercase(s: &str, out: &mut String) {
+fn lowercase(s: &str, f: &mut fmt::Formatter) -> fmt::Result {
     let mut chars = s.chars().peekable();
     while let Some(c) = chars.next() {
         if c == 'Σ' && chars.peek().is_none() {
-            out.push('ς');
+            write!(f, "ς")?;
         } else {
-            out.extend(c.to_lowercase());
+            write!(f, "{}", c.to_lowercase())?;
         }
     }
+
+    Ok(())
 }
 
-fn uppercase(s: &str, out: &mut String ) {
+fn uppercase(s: &str, f: &mut fmt::Formatter) -> fmt::Result {
     for c in s.chars() {
-        out.extend(c.to_uppercase())
+        write!(f, "{}", c.to_uppercase())?;
     }
+
+    Ok(())
 }
 
-fn capitalize(s: &str, out: &mut String) {
+fn capitalize(s: &str, f: &mut fmt::Formatter) -> fmt::Result {
     let mut char_indices = s.char_indices();
     if let Some((_, c)) = char_indices.next() {
-        out.extend(c.to_uppercase());
+        write!(f, "{}", c.to_uppercase())?;
         if let Some((i, _)) = char_indices.next() {
-            lowercase(&s[i..], out);
+            lowercase(&s[i..], &mut *f)?;
         }
     }
+
+    Ok(())
 }

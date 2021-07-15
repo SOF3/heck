@@ -1,3 +1,5 @@
+use std::fmt;
+
 /// This trait defines a shouty snake case conversion.
 ///
 /// In SHOUTY_SNAKE_CASE, word boundaries are indicated by underscores and all
@@ -37,9 +39,33 @@ impl<T: ?Sized + ShoutySnakeCase> ShoutySnekCase for T {
 
 impl ShoutySnakeCase for str {
     fn to_shouty_snake_case(&self) -> Self::Owned {
-        ::transform(self, ::uppercase, |s| s.push('_'))
+        AsShoutySnakeCase(self).to_string()
     }
 }
+
+/// This wrapper performs a camel case conversion in [`fmt::Display`].
+///
+/// ## Example:
+///
+/// ```
+/// extern crate heck;
+/// fn main() {
+///     use heck::AsShoutySnakeCase;
+///     
+///     let sentence = "That world is growing in this minute.";
+///     assert_eq!(format!("{}", AsShoutySnakeCase(sentence)), "THAT_WORLD_IS_GROWING_IN_THIS_MINUTE");
+/// }
+/// ```
+pub struct AsShoutySnakeCase<T: AsRef<str>>(pub T);
+
+impl<T: AsRef<str>> fmt::Display for AsShoutySnakeCase<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        ::transform(self.0.as_ref(), ::uppercase, |f| write!(f, "_"), f)
+    }
+}
+
+/// Oh heck, AsShoutySnekCase is an alias for AsShoutySnakeCase. See AsShoutySnakeCase for more documentation.
+pub use AsShoutySnakeCase as AsShoutySnekCase;
 
 #[cfg(test)]
 mod tests {
